@@ -97,4 +97,8 @@ echo "Configuring Gnome..."
 echo "Installing flatpaks (like discord and spotify)"
 . install-flatpaks.sh
 
+
+echo "Installing Dotfiles"
+. dotfiles-setup.sh
+
 echo "Setup complete! You may want to reboot your system."
