@@ -17,8 +17,6 @@ EXTENSIONS=(
   "blur-my-shell@aunetx"
   "space-bar@luchrioh"
   "undecorate@sun.wxg@gmail.com"
-  "tophat@fflewddur.github.io"
-  "switcher@landau.fi"
 )
 
 for ext in "${EXTENSIONS[@]}"; do

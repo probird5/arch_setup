@@ -97,6 +97,8 @@ echo "Configuring Gnome..."
 echo "Installing flatpaks (like discord and spotify)"
 . install-flatpaks.sh
 
+echo "Setting up default shell"
+chsh -s /bin/zsh
 
 echo "Installing Dotfiles"
 . dotfiles-setup.sh
