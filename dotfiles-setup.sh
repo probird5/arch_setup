@@ -30,6 +30,8 @@ if [ $? -eq 0 ]; then
   stow starship
   stow i3
   stow rofi
+  stow zsh
+  stow hypr
 else
   echo "Failed to clone the repository."
   exit 1
