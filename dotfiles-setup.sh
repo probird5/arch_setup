@@ -31,7 +31,8 @@ if [ $? -eq 0 ]; then
   stow i3
   stow rofi
   stow zsh
-  stow hypr
+  rm ~/.config/hypr/hyprland.conf
+  stow -v -t ~/.config/hypr hypr
 else
   echo "Failed to clone the repository."
   exit 1
