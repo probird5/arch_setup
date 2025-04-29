@@ -95,4 +95,7 @@ chsh -s /bin/zsh
 echo "Installing Dotfiles"
 . dotfiles-setup.sh
 
+echo "Reloading config"
+hyprctl reload
+
 echo "Setup complete! You may want to reboot your system."
