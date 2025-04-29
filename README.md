@@ -1,4 +1,4 @@
-# Typecraft's Crucible 🛠️
+# Arch Linux Setup
 
 An Arch Linux System Tool that automates the setup and configuration of an Arch Linux system with Gnome. It installs and configures packages, desktop environments, and various utilities to create a fully functional development environment.
 
@@ -14,10 +14,8 @@ An Arch Linux System Tool that automates the setup and configuration of an Arch 
   - Media packages
   - Fonts
 - 🛠️ Automatic installation of yay AUR helper
-- 🖥️ GNOME desktop environment setup with tiling-like features
 - 🎮 Flatpak integration for specific applications
 - ⚙️ Automatic service configuration
-- 🔧 GNOME extensions and hotkey configuration
 
 ## Prerequisites
 
@@ -30,7 +28,7 @@ An Arch Linux System Tool that automates the setup and configuration of an Arch 
 1. Clone this repository:
 
 ```bash
-git clone https://github.com/typecraft-dev/crucible.git
+git clone https://github.com/probird5/arch_setup
 ```
 
 2. Run the setup script:
@@ -44,3 +42,11 @@ git clone https://github.com/typecraft-dev/crucible.git
 4. The script will handle the rest of the setup process.
 
 5. After the setup is complete, you can reboot your system to see the changes.
+
+---
+
+## Need to add
+
+- [ ] Auto theming
+- [ ] Fix tmux setup
+- [ ] git global config
