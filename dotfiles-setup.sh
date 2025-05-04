@@ -33,6 +33,7 @@ if [ $? -eq 0 ]; then
   stow zsh
   stow tmux
   stow ghostty
+  stow waybar
   rm ~/.config/hypr/hyprland.conf
   stow -v -t ~/.config/hypr hypr
 else
