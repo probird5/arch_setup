@@ -51,7 +51,9 @@ git clone https://github.com/probird5/arch_setup
 - [ ] Auto theming
 - [ ] Fix tmux setup
 - [ ] git global config
+- [ ] qemu setup
 
 Theme
  - create ~/.themes and ~/.icons
  - Download theme and move into respective folders
+
