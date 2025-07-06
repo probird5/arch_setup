@@ -34,8 +34,7 @@ if [ $? -eq 0 ]; then
   stow tmux
   stow ghostty
   stow waybar
-  rm ~/.config/hypr/hyprland.conf
-  stow -v -t ~/.config/hypr hypr
+  stow hypr
 else
   echo "Failed to clone the repository."
   exit 1
