@@ -1,23 +1,41 @@
 #!/usr/bin/env bash
 # install-nvidia.sh – standalone NVIDIA driver helper for Arch Linux
-set -euo pipefail
 
 ###############################################################################
-# 0.  General helpers & colouring
+# 0.  Strict mode & always-defined vendor flags (prevents "unbound variable")
 ###############################################################################
-# ANSI colours
+AMD=false          # AuthenticAMD?
+INTEL=false        # GenuineIntel?
+
+set -euo pipefail  # enable "fail-fast" *after* we created the flags
+
+###############################################################################
+# 1.  General helpers & colouring
+###############################################################################
 RED=$(printf '\033[0;31m');   GREEN=$(printf '\033[0;32m')
 YELLOW=$(printf '\033[0;33m'); CYAN=$(printf '\033[0;36m')
 RC=$(printf '\033[0m')        # Reset colour
 
 command_exists() { command -v "$1" >/dev/null 2>&1; }
 
-# Detect package manager / escalation tool
-PACKAGER=pacman                   # Arch only
-ESCALATION_TOOL=sudo              # always use sudo; script should be run as normal user
+PACKAGER=pacman          # Arch only
+ESCALATION_TOOL=sudo     # script should be run as normal user
 
 ###############################################################################
-# 1.  Sanity-check the environment
+# 2.  CPU-vendor detection  (runs once, sets $AMD and $INTEL)
+###############################################################################
+detectCpuVendor() {
+    local vendor
+    vendor=$(grep -m1 '^vendor_id' /proc/cpuinfo | awk '{print $3}')
+    case "$vendor" in
+        AuthenticAMD) AMD=true ;;
+        GenuineIntel) INTEL=true ;;
+    esac
+}
+detectCpuVendor
+
+###############################################################################
+# 3.  Sanity-check the environment
 ###############################################################################
 checkEnv() {
   if ! command_exists "$PACKAGER"; then
@@ -25,7 +43,6 @@ checkEnv() {
     exit 1
   fi
 }
-
 checkEscalationTool() {
   if ! command_exists "$ESCALATION_TOOL"; then
     printf "%b\n" "${RED}sudo is required.  Please install sudo and try again.${RC}"
@@ -34,7 +51,7 @@ checkEscalationTool() {
 }
 
 ###############################################################################
-# 2.  Dependency installation
+# 4.  Dependency installation
 ###############################################################################
 installDeps() {
   "${ESCALATION_TOOL}" "$PACKAGER" -S --needed --noconfirm \
@@ -56,24 +73,26 @@ installDeps() {
 }
 
 ###############################################################################
-# 3.  Hardware checks & prompts
+# 5.  Hardware checks & prompts
 ###############################################################################
 checkNvidiaHardware() {
-  # Returns 0 for Ada/Lovelace, 1 for older (Maxwell/ Pascal/Volta)
+  # Returns 0 for Ada/Lovelace, 1 for older (Maxwell / Pascal / Volta)
   local code
   code=$(lspci -k | grep -A2 -E "(VGA|3D)" | \
          grep NVIDIA | sed 's/.*Corporation //;s/ .*//' | cut -c1-2)
   case "$code" in
-      TU|GA|AD) return 0 ;;  # Turning / Ampere / Ada → supports open driver
-      GM|GP|GV) return 1 ;;  # Maxwell / Pascal / Volta → use proprietary
+      TU|GA|AD) return 0 ;;  # Turing / Ampere / Ada → open driver ok
+      GM|GP|GV) return 1 ;;  # Maxwell / Pascal / Volta → proprietary
       *) printf "%b\n" "${RED}Unsupported NVIDIA GPU.${RC}" ; exit 1 ;;
   esac
 }
 
 checkIntelHardware() {
+  $INTEL || return 1                 # skip entirely on non-Intel CPUs
   local gen
-  gen=$(grep -m1 "model name" /proc/cpuinfo | cut -d':' -f2 | sed 's/^ //;s/.*Gen \([0-9]\+\).*/\1/')
-  [[ ${gen:-0} -ge 11 ]]   # Gen 11+ needs ibt=off
+  gen=$(grep -m1 "model name" /proc/cpuinfo \
+        | sed -n 's/.*Gen \([0-9]\+\).*/\1/p')
+  [[ ${gen:-0} -ge 11 ]]            # Gen-11+ needs ibt=off
 }
 
 promptUser() {
@@ -82,21 +101,22 @@ promptUser() {
 }
 
 ###############################################################################
-# 4.  GRUB helpers
+# 6.  GRUB helpers
 ###############################################################################
 setKernelParam() {
   local param=$1
   if grep -q "$param" /etc/default/grub; then
     printf "%b\n" "${YELLOW}${param} already present in GRUB cmdline.${RC}"
   else
-    "${ESCALATION_TOOL}" sed -i "/^GRUB_CMDLINE_LINUX_DEFAULT=/ s/\"$/ ${param}\"/" /etc/default/grub
+    "${ESCALATION_TOOL}" sed -i \
+      "/^GRUB_CMDLINE_LINUX_DEFAULT=/ s/\"$/ ${param}\"/" /etc/default/grub
     printf "%b\n" "${CYAN}Added ${param} to GRUB config.${RC}"
     "${ESCALATION_TOOL}" grub-mkconfig -o /boot/grub/grub.cfg
   fi
 }
 
 ###############################################################################
-# 5.  Hardware-acceleration (VA-API) setup
+# 7.  VA-API / NVDEC helper
 ###############################################################################
 setupHardwareAcceleration() {
   if ! command_exists grub-mkconfig; then
@@ -120,8 +140,9 @@ setupHardwareAcceleration() {
   "${ESCALATION_TOOL}" ninja install
   cd - >/dev/null
 
-  # Environment for Firefox etc.
-  "${ESCALATION_TOOL}" sed -i '/^\(MOZ_DISABLE_RDD_SANDBOX\|LIBVA_DRIVER_NAME\)=/d' /etc/environment
+  # Firefox / Electron env vars
+  "${ESCALATION_TOOL}" sed -i \
+      '/^\(MOZ_DISABLE_RDD_SANDBOX\|LIBVA_DRIVER_NAME\)=/d' /etc/environment
   printf "LIBVA_DRIVER_NAME=nvidia\nMOZ_DISABLE_RDD_SANDBOX=1\n" | \
       "${ESCALATION_TOOL}" tee -a /etc/environment >/dev/null
 
@@ -136,17 +157,19 @@ setupHardwareAcceleration() {
 }
 
 ###############################################################################
-# 6.  Main installer
+# 8.  Main installer
 ###############################################################################
 installDriver() {
   installDeps
 
   if checkNvidiaHardware && promptUser "Use NVIDIA *open* driver (beta)"; then
     printf "%b\n" "${CYAN}Installing open-source driver …${RC}"
-    "${ESCALATION_TOOL}" "$PACKAGER" -S --needed --noconfirm nvidia-open-dkms nvidia-utils
+    "${ESCALATION_TOOL}" "$PACKAGER" -S --needed --noconfirm \
+        nvidia-open-dkms nvidia-utils
   else
     printf "%b\n" "${CYAN}Installing proprietary driver …${RC}"
-    "${ESCALATION_TOOL}" "$PACKAGER" -S --needed --noconfirm nvidia-dkms nvidia-utils
+    "${ESCALATION_TOOL}" "$PACKAGER" -S --needed --noconfirm \
+        nvidia-dkms nvidia-utils
   fi
 
   # Extra kernel parameters
@@ -168,7 +191,7 @@ installDriver() {
 }
 
 ###############################################################################
-# 7.  Kick things off
+# 9.  Kick things off
 ###############################################################################
 checkEnv
 checkEscalationTool
