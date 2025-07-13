@@ -95,6 +95,12 @@ chsh -s /bin/zsh
 echo "Installing Dotfiles"
 . dotfiles-setup.sh
 
+read -rp "Do you want to install the NVIDIA driver now? [y/N]: " nvanswer
+if [[ $nvanswer =~ ^[Yy]$ ]]; then
+    echo "Installing NVIDIA driver…"
+    ./nvidia_drivers.sh        
+fi                             
+
 echo "Reloading config"
 hyprctl reload
 
